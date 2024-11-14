@@ -1,0 +1,74 @@
+# Use an Ubuntu base image
+FROM ubuntu:22.04
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Copy the current directory contents into the container at /usr/src/app
+COPY . .
+
+# Install Python3 and pip
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install ALSA libraries required by simpleaudio
+RUN apt-get update && apt-get install -y libasound2-dev
+
+# Install gedit
+RUN apt-get update && apt-get install -y gedit
+
+# Install xrandr
+RUN apt-get update && apt-get install -y x11-xserver-utils
+
+# Install the dependencies listed in requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Install OpenCV dependencies for GUI support and X11
+RUN apt-get update && apt-get install -y \
+    libx11-dev \
+    libgtk-3-dev \
+    libxcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install other necessary dependencies
+RUN apt-get update && apt-get install -y \
+    curl wget nano software-properties-common \
+    sudo apt-utils gnupg2 apt-transport-https \
+    git v4l-utils python3-dev libasound2-dev \
+    linux-headers-generic flex bison \
+    dconf-editor cheese && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install OpenVINO and other Intel packages
+RUN mkdir -p /opt/intel && cd /opt/intel \
+    && curl -L https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.3/linux/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64.tgz --output openvino_2023.3.0.tgz \
+    && tar -xf openvino_2023.3.0.tgz \
+    && mv l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64 openvino_2023.3.0 \
+    && cd openvino_2023.3.0 && ./install_dependencies/install_openvino_dependencies.sh -y
+
+# Add the OpenVINO setup to bashrc
+RUN echo "source /opt/intel/openvino_2023.3.0/setupvars.sh" >> ~/.bashrc
+
+# Make sure prerequisites to add repository access are available FOR GPU:
+RUN apt-get update
+RUN apt-get install -y gpg-agent wget
+RUN wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
+    gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
+RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu jammy/production/2328 unified" | \
+    tee /etc/apt/sources.list.d/intel-gpu-jammy.list
+
+# Install GPU packages (without kernel-specific dependencies)
+RUN apt-get update && apt-get install -y \
+    flex bison intel-fw-gpu xpu-smi \
+    intel-opencl-icd intel-level-zero-gpu level-zero \
+    intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 \
+    libegl-mesa0 libegl1-mesa libegl1-mesa-dev libgbm1 libgl1-mesa-dev libgl1-mesa-dri \
+    libglapi-mesa libgles2-mesa-dev libglx-mesa0 libigdgmm12 libxatracker2 mesa-va-drivers \
+    mesa-vdpau-drivers mesa-vulkan-drivers va-driver-all vainfo hwinfo clinfo
+
+# Specify the default command
+CMD ["python3", "./main_falco.py"]
