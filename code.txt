@@ -1,2 +1,3 @@
 Running cmnt:
 sudo docker run --restart=always -it -e DISPLAY=$DISPLAY -v /home:/home -v /media:/media -v /dev:/dev --network=host --volume /tmp/.X11-unix:/tmp/.X11-unix --privileged opencv-camera
+docker run --restart=always -it -e DISPLAY=$DISPLAY -v /media:/media -v /dev:/dev -v  /var/log:/var/log --network=host --volume /tmp/.X11-unix:/tmp/.X11-unix --privileged temp_falco
