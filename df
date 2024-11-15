@@ -52,6 +52,7 @@ RUN mkdir -p /opt/intel && cd /opt/intel \
 
 # Add the OpenVINO setup to bashrc
 RUN echo "source /opt/intel/openvino_2023.3.0/setupvars.sh" >> ~/.bashrc
+RUN echo "source /opt/intel/openvino_2023.3.0/setupvars.sh" >> /etc/bash.bashrc
 
 # Make sure prerequisites to add repository access are available FOR GPU:
 RUN apt-get update
@@ -71,4 +72,6 @@ RUN apt-get update && apt-get install -y \
     mesa-vdpau-drivers mesa-vulkan-drivers va-driver-all vainfo hwinfo clinfo
 
 # Specify the default command
-CMD ["python3", "./main_falco.py"]
+# CMD ["python3", "./main_falco.py"]
+CMD ["bash", "-c", "source /opt/intel/openvino_2023.3.0/setupvars.sh && python3 ./main_falco.py"]
+
