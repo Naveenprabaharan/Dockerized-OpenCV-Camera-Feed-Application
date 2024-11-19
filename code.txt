@@ -7,3 +7,77 @@ close all container :
 sudo docker rm -v -f $(sudo docker ps -qa)
 build:
 sudo docker build -t temp_falco .
+
+
+
+# final:
+# Use an Ubuntu base image
+FROM ubuntu:22.04
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+
+# Copy the current directory contents into the container at /usr/src/app
+COPY . .
+
+# Update system
+RUN apt update -y
+RUN apt upgrade -y
+RUN apt autoremove -y
+
+# Install gedit
+RUN apt-get update && apt-get install -y gedit
+
+# Install xrandr
+RUN apt-get update && apt-get install -y x11-xserver-utils
+
+
+# openvino_2023.3.0 openvino_2023
+RUN apt-get update && apt-get install -y curl && \
+    mkdir -p /opt/intel && \
+    curl -L https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.3/linux/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64.tgz --output /opt/intel/openvino_2023.3.0.tgz && \
+    tar -xf /opt/intel/openvino_2023.3.0.tgz -C /opt/intel && \
+    mv /opt/intel/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64 /opt/intel/openvino_2023.3.0 && \
+    /opt/intel/openvino_2023.3.0/install_dependencies/install_openvino_dependencies.sh -y && \
+    ln -s /opt/intel/openvino_2023.3.0 /opt/intel/openvino_2023 && \
+    rm -f /opt/intel/openvino_2023.3.0.tgz
+
+
+# To run inference in GPU need to install additional libraries
+RUN apt update -y
+RUN apt install -y gpg-agent wget
+RUN wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
+    gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
+
+RUN  echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu jammy/production/2328 unified" | \
+    tee /etc/apt/sources.list.d/intel-gpu-jammy.list
+RUN apt update
+RUN apt install -y linux-headers-$(uname -r)
+
+# GPU installation
+RUN apt install -y \
+    intel-opencl-icd intel-level-zero-gpu level-zero \
+    intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 \
+    libegl-mesa0 libegl1-mesa libegl1-mesa-dev libgbm1 libgl1-mesa-dev libgl1-mesa-dri \
+    libglapi-mesa libgles2-mesa-dev libglx-mesa0 libigdgmm12 libxatracker2 mesa-va-drivers \
+    mesa-vdpau-drivers mesa-vulkan-drivers va-driver-all vainfo hwinfo clinfo
+
+RUN echo "source /opt/intel/openvino_2023.3.0/setupvars.sh" >> ~/.bashrc
+RUN echo "source /opt/intel/openvino_2023.3.0/setupvars.sh" >> /etc/bash.bashrc
+
+# sound
+RUN apt install git -y
+RUN apt install v4l-utils -y
+RUN apt-get install -y python3-dev libasound2-dev
+
+# Install Python3 and pip
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+# Requirements Installation
+RUN pip install -r requirements.txt
+RUN apt-get update && apt-get install -y dmidecode
+
+# Run comment
+CMD ["bash", "-c", "source /opt/intel/openvino_2023.3.0/setupvars.sh && python3 ./main_falco.py"]
