@@ -1,0 +1,4 @@
+* * * * * root echo "Hello world" >> /var/log/cron.log 2>&1
+@reboot root sleep 120 && cd /usr/src/app && python3 cleanup_runner.py >> /var/log/cron.log 2>&1
+0 */1 * * * root cd /usr/src/app && python3 cleanup_runner.py >> /var/log/cron.log 2>&1
+# Don't remove the empty line at the end of this file. It is required to run the cron job
