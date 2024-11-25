@@ -1,19 +1,64 @@
+# # Use an Ubuntu base image
+# FROM ubuntu:22.04
+
+# # Set the working directory in the container
+# WORKDIR /usr/src/app
+
+# # Copy the current directory contents into the container
+# COPY . .
+
+# # Set environment variables to avoid interactive prompts
+# # ENV DEBIAN_FRONTEND=noninteractive
+
+# # Update system and install required dependencies
+# RUN apt-get update && \
+#     apt-get install -y --no-install-recommends \
+#     curl wget gpg-agent git v4l-utils linux-headers-$(uname -r) flex bison \
+#     intel-opencl-icd intel-media-va-driver-non-free libmfx1 \
+#     libvpl2 libegl-mesa0 libegl1-mesa libegl1-mesa-dev libgbm1 \
+#     libgl1-mesa-dev libgl1-mesa-dri libglapi-mesa libgles2-mesa-dev \
+#     libglx-mesa0 libigdgmm12 libxatracker2 mesa-va-drivers mesa-vdpau-drivers \
+#     mesa-vulkan-drivers va-driver-all vainfo hwinfo clinfo \
+#     python3 python3-pip python3-dev libasound2-dev dmidecode && \
+#     rm -rf /var/lib/apt/lists/*
+
+# # Download and set up OpenVINO
+# RUN mkdir -p /opt/intel && \
+#     curl -L https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.3/linux/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64.tgz --output /opt/intel/openvino_2023.3.0.tgz && \
+#     tar -xzf /opt/intel/openvino_2023.3.0.tgz -C /opt/intel && \
+#     mv /opt/intel/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64 /opt/intel/openvino_2023.3.0 && \
+#     DEBIAN_FRONTEND=noninteractive /opt/intel/openvino_2023.3.0/install_dependencies/install_openvino_dependencies.sh -y && \
+#     ln -s /opt/intel/openvino_2023.3.0 /opt/intel/openvino_2023 && \
+#     rm -f /opt/intel/openvino_2023.3.0.tgz
+
+# # Add OpenVINO setup to bashrc for persistent environment setup
+# RUN echo "source /opt/intel/openvino_2023/setupvars.sh" >> ~/.bashrc && \
+#     echo "source /opt/intel/openvino_2023/setupvars.sh" >> /etc/bash.bashrc
+
+# # Install Python dependencies
+# RUN pip3 install --no-cache-dir -r requirements.txt
+
+# # Default command
+# CMD ["bash", "-c", "source /opt/intel/openvino_2023/setupvars.sh && python3 ./main_falco.py"]
+
+
+
+
+# -------------------------------------------------------
 # Use an Ubuntu base image
 FROM ubuntu:22.04
 
 # Set the working directory in the container
 WORKDIR /usr/src/app
 
+
 # Copy the current directory contents into the container at /usr/src/app
 COPY . .
 
-# Install Python3 and pip
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install ALSA libraries required by simpleaudio
-RUN apt-get update && apt-get install -y libasound2-dev
+# Update system
+RUN apt update -y
+RUN apt upgrade -y
+RUN apt autoremove -y
 
 # Install gedit
 RUN apt-get update && apt-get install -y gedit
@@ -21,57 +66,113 @@ RUN apt-get update && apt-get install -y gedit
 # Install xrandr
 RUN apt-get update && apt-get install -y x11-xserver-utils
 
-# Install the dependencies listed in requirements.txt
-RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Install OpenCV dependencies for GUI support and X11
-RUN apt-get update && apt-get install -y \
-    libx11-dev \
-    libgtk-3-dev \
-    libxcb1 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    && rm -rf /var/lib/apt/lists/*
+# RUN apt install curl -y
+# RUN mkdir /opt/intel
+# RUN cd Downloads
+# RUN curl -L https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.3/linux/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64.tgz --output openvino_2023.3.0.tgz
+# RUN tar -xf openvino_2023.3.0.tgz
+# RUN mv l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64 /opt/intel/openvino_2023.3.0
+# RUN cd /opt/intel/openvino_2023.3.0
+# RUN -E ./install_dependencies/install_openvino_dependencies.sh -y
+# RUN cd /opt/intel
+# RUN ln -s openvino_2023.3.0 openvino_2023
+RUN apt-get update && apt-get install -y curl && \
+    mkdir -p /opt/intel && \
+    curl -L https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.3/linux/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64.tgz --output /opt/intel/openvino_2023.3.0.tgz && \
+    tar -xf /opt/intel/openvino_2023.3.0.tgz -C /opt/intel && \
+    mv /opt/intel/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64 /opt/intel/openvino_2023.3.0 && \
+    /opt/intel/openvino_2023.3.0/install_dependencies/install_openvino_dependencies.sh -y && \
+    ln -s /opt/intel/openvino_2023.3.0 /opt/intel/openvino_2023 && \
+    rm -f /opt/intel/openvino_2023.3.0.tgz
 
-# Install other necessary dependencies
-RUN apt-get update && apt-get install -y \
-    curl wget nano software-properties-common \
-    sudo apt-utils gnupg2 apt-transport-https \
-    git v4l-utils python3-dev libasound2-dev \
-    linux-headers-generic flex bison \
-    dconf-editor cheese && \
-    rm -rf /var/lib/apt/lists/*
 
-# Install OpenVINO and other Intel packages
-RUN mkdir -p /opt/intel && cd /opt/intel \
-    && curl -L https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.3/linux/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64.tgz --output openvino_2023.3.0.tgz \
-    && tar -xf openvino_2023.3.0.tgz \
-    && mv l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64 openvino_2023.3.0 \
-    && cd openvino_2023.3.0 && ./install_dependencies/install_openvino_dependencies.sh -y
-
-# Add the OpenVINO setup to bashrc
-RUN echo "source /opt/intel/openvino_2023.3.0/setupvars.sh" >> ~/.bashrc
-RUN echo "source /opt/intel/openvino_2023.3.0/setupvars.sh" >> /etc/bash.bashrc
-
-# Make sure prerequisites to add repository access are available FOR GPU:
-RUN apt-get update
-RUN apt-get install -y gpg-agent wget
+# To run inference in GPU need to install additional libraries
+RUN apt update -y
+RUN apt install -y gpg-agent wget
 RUN wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
     gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
-RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu jammy/production/2328 unified" | \
-    tee /etc/apt/sources.list.d/intel-gpu-jammy.list
 
-# Install GPU packages (without kernel-specific dependencies)
-RUN apt-get update && apt-get install -y \
-    flex bison intel-fw-gpu xpu-smi \
+RUN  echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu jammy/production/2328 unified" | \
+    tee /etc/apt/sources.list.d/intel-gpu-jammy.list
+RUN apt update
+RUN apt install -y linux-headers-$(uname -r)
+
+# RUN apt update -y
+# RUN apt install -y linux-headers-generic flex bison intel-fw-gpu intel-i915-dkms xpu-smi
+
+RUN apt install -y \
     intel-opencl-icd intel-level-zero-gpu level-zero \
     intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 \
     libegl-mesa0 libegl1-mesa libegl1-mesa-dev libgbm1 libgl1-mesa-dev libgl1-mesa-dri \
     libglapi-mesa libgles2-mesa-dev libglx-mesa0 libigdgmm12 libxatracker2 mesa-va-drivers \
     mesa-vdpau-drivers mesa-vulkan-drivers va-driver-all vainfo hwinfo clinfo
 
-# Specify the default command
-# CMD ["python3", "./main_falco.py"]
-CMD ["bash", "-c", "source /opt/intel/openvino_2023.3.0/setupvars.sh && python3 ./main_falco.py"]
+# RUN RUN stat -c "%G" /dev/dri/render*
+# RUN groups ${USER}
+# RUN gpasswd -a ${USER} render
+# RUN newgrp render
 
+# source /opt/intel/openvino_2023/setupvars.sh
+# Add the OpenVINO setup to bashrc
+RUN echo "source /opt/intel/openvino_2023.3.0/setupvars.sh" >> ~/.bashrc
+RUN echo "source /opt/intel/openvino_2023.3.0/setupvars.sh" >> /etc/bash.bashrc
+
+
+RUN apt install git -y
+RUN apt install v4l-utils -y
+RUN apt-get install -y python3-dev libasound2-dev
+
+# Install Python3 and pip
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip install -r requirements.txt
+RUN apt-get update && apt-get install -y alsa-utils libasound2 libasound2-dev
+# RUN groupadd -r audio && 
+RUN usermod -a -G audio $(whoami)
+RUN apt-get update && apt-get install -y dmidecode
+# CMD ["python3", "./main_falco.py"]
+RUN apt-get -y autoremove --purge alsa-utils
+RUN apt-get update
+RUN apt-get -y install alsa-utils
+RUN adduser root audio
+# options snd_hda_intel index=2,1,0
+# gedit /proc/asound/cards
+# RUN echo "pcm.!default {\n    type hw\n    card 2\n}\n\nctl.!default {\n    type hw\n    card 2\n}" > /etc/asound.conf
+# RUN echo "pcm.!default {\n    type hw\n    card 0\n    device 3\n}\n\nctl.!default {\n    type hw\n    card 0\n    device 3\n}" > /etc/asound.conf
+
+# gedit /etc/asound.conf
+RUN export AUDIODEV=hw:0,0
+RUN apt-get update
+RUN apt-get -y install sox
+# RUN sudo rm -f /etc/asound.conf
+# RUN chmod -R 777 /dev/snd
+# Create the script that updates /etc/asound.conf based on 'aplay -l'
+COPY asound.conf /etc/
+RUN chmod +x /etc/asound.conf
+# RUN sox ./.support_files/red_final.wav ./.support_files/red_final_stereo.wav channels 2
+# RUN aplay ./.support_files/red_final_stereo.wav
+
+# CRON
+RUN apt-get install -y cron
+
+# Set up the cron job
+COPY crontab /etc/cron.d/hello-cron
+
+# Give execution rights to the cron job
+RUN chmod 0644 /etc/cron.d/hello-cron
+
+# Create the cron log file
+RUN touch /var/log/cron.log
+
+# Set up cron to run in the background
+RUN service cron start
+
+RUN cron service status
+# CMD ["bash", "-c", "source /opt/intel/openvino_2023.3.0/setupvars.sh && python3 ./main_falco.py && cron"]
+CMD ["bash", "-c", "source /opt/intel/openvino_2023.3.0/setupvars.sh && cron && python3 ./main_falco.py"]
+
+# Update the /etc/asound.conf based on detected card number at container startup
+# CMD ["/bin/bash", "-c", "/usr/local/bin/update_asound.sh && source /opt/intel/openvino_2023.3.0/setupvars.sh && python3 ./main_falco.py"]
